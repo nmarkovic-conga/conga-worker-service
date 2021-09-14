@@ -1,6 +1,7 @@
 import pika
 import json
 
+
 class WorkerService:
     __instance = None
 
@@ -22,14 +23,14 @@ class WorkerService:
             queue=queue_chanel, on_message_callback=callback, auto_ack=True)
         self.channel.start_consuming()
 
-    def push_to_channel(self, file_name: str, document_type_id: int, processing_options: int, queue_chanel: str)  -> None:
+    def push_to_channel(self, document_id: int, file_name: str, document_type_id: int, processing_options: int, queue_chanel: str, extension="") -> None:
         self.channel.queue_declare(queue=queue_chanel, durable=True)
         self.channel.basic_publish(
             exchange='',
             routing_key=queue_chanel,
-            body=json.dumps({"file_name": file_name, "document_type_id": document_type_id,
-                             "processing_options": processing_options}),
+            body=json.dumps({"document_id": document_id, "file_name": file_name, "document_type_id": document_type_id,
+                             "processing_options": processing_options, "extension": extension}),
             properties=pika.BasicProperties(
-                delivery_mode=2, 
+                delivery_mode=2,
             )
         )
