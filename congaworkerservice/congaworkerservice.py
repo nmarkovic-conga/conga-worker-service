@@ -13,7 +13,7 @@ class WorkerService:
 
     def __init__(self, queue_url: str):
         self.connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host=queue_url))
+            pika.ConnectionParameters(host=queue_url, heartbeat=600, blocked_connection_timeout=300))
         self.channel = self.connection.channel()
         WorkerService.__instance = self
 
