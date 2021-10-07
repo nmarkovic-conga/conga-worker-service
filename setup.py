@@ -7,7 +7,7 @@ requirements = ["pip>=21.2.4", "wheel>=0.37.0", "pika>=1.2.0"]
 
 setup(
     name="congaworkerservice",
-    version="0.0.6",
+    version="0.0.7",
     author="Nikola Markovic",
     author_email="nmarkovic@conga.com",
     description="A package to interact with queue message broker",
