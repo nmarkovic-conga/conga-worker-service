@@ -9,10 +9,6 @@ class WorkerService:
     def getInstance(queue_url: str, username: str, password: str):
         if WorkerService.__instance == None:
             return WorkerService(queue_url, username, password)
-
-        if not WorkerService.__instance.channel.is_open:
-            WorkerService.__instance.channel.open()
-
         return WorkerService.__instance
 
     def __init__(self, queue_url: str, username: str, password: str):
@@ -51,3 +47,4 @@ class WorkerService:
                 "extension": extension
             }),
             properties=pika.BasicProperties(delivery_mode=2, ))
+        self.connection.close()
