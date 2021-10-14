@@ -15,7 +15,7 @@ class WorkerService:
         self.credentials = pika.PlainCredentials(username, password)
         self.connection = pika.BlockingConnection(
             pika.ConnectionParameters(host=queue_url,
-                                      heartbeat=600,
+                                      heartbeat=0,
                                       blocked_connection_timeout=300,
                                       credentials=self.credentials))
         self.channel = self.connection.channel()
