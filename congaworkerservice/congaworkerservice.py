@@ -1,50 +1,45 @@
-import pika
 import json
 
 
 class WorkerService:
-    __instance = None
+    def __init__(self, client, queue_url):
+        self.queue_url = queue_url
+        self.worker_service = client
 
-    @staticmethod
-    def getInstance(queue_url: str, username: str, password: str):
-        if WorkerService.__instance == None:
-            return WorkerService(queue_url, username, password)
-        return WorkerService.__instance
+    def create_queue_chanel(self, queue_name):
+        self.worker_service.create_queue(QueueName=queue_name)
 
-    def __init__(self, queue_url: str, username: str, password: str):
-        self.credentials = pika.PlainCredentials(username, password)
-        self.connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host=queue_url,
-                                      heartbeat=0,
-                                      blocked_connection_timeout=300,
-                                      credentials=self.credentials))
-        self.channel = self.connection.channel()
-        WorkerService.__instance = self
+    def send_message_into_queue(self, message_body, queue_chanel):
+        self.worker_service.send_message(
+            QueueUrl=self.generate_queue_url(queue_chanel),
+            DelaySeconds=1,
+            MessageBody=(json.dumps({
+                **message_body,
+            })))
 
-    def start_consuming(self, callback, queue_chanel: str) -> None:
-        self.channel.basic_qos(prefetch_count=1)
-        self.channel.basic_consume(queue=queue_chanel,
-                                   on_message_callback=callback,
-                                   auto_ack=True)
-        self.channel.start_consuming()
+    def receive_message(self, queue_name):
+        response = self.worker_service.receive_message(
+            QueueUrl=self.generate_queue_url(queue_name),
+            MaxNumberOfMessages=1,
+            MessageAttributeNames=['All'],
+            VisibilityTimeout=0,
+            WaitTimeSeconds=0)
 
-    def push_to_channel(self,
-                        document_id: int,
-                        file_name: str,
-                        document_type_id: int,
-                        processing_options: int,
-                        queue_chanel: str,
-                        extension="") -> None:
-        self.channel.queue_declare(queue=queue_chanel, durable=True)
-        self.channel.basic_publish(
-            exchange="",
-            routing_key=queue_chanel,
-            body=json.dumps({
-                "document_id": document_id,
-                "file_name": file_name,
-                "document_type_id": document_type_id,
-                "processing_options": processing_options,
-                "extension": extension
-            }),
-            properties=pika.BasicProperties(delivery_mode=2, ))
-        self.connection.close()
+        if "Messages" in response:
+            message = response['Messages']
+            self.delete_message_from_queue(message[0]['ReceiptHandle'],
+                                           queue_name)
+            return response['Messages'][0]['Body']
+
+    def delete_message_from_queue(self, receipt_handle, queue_name):
+        self.worker_service.delete_message(
+            QueueUrl=self.generate_queue_url(queue_name),
+            ReceiptHandle=receipt_handle)
+
+    def generate_queue_url(self, queue_name):
+        return self.queue_url + '/queue/' + queue_name
+
+    def check_does_queue_exist(self, queue_name):
+        response = self.worker_service.list_queues()
+        if self.generate_queue_url(queue_name) not in response['QueueUrls']:
+            self.create_queue_chanel(queue_name)
